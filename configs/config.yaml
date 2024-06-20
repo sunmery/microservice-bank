@@ -1,0 +1,35 @@
+server:
+  http:
+    addr: 0.0.0.0:30001
+    timeout: 1s
+  grpc:
+    addr: 0.0.0.0:30002
+    timeout: 1s
+
+# 数据库
+data:
+  database:
+    driver: mysql
+    source: root:root@tcp(127.0.0.1:3306)/test?parseTime=True&loc=Local
+  redis:
+    addr: 127.0.0.1:6379
+    read_timeout: 0.2s
+    write_timeout: 0.2s
+
+# 身份验证&鉴权
+auth:
+  jwt_key: hqFr%3ddt32DGlSTOI5cO6@TH#fFwYnP$S
+
+# 服务注册&发现
+consul:
+  address: 192.168.2.181:8500
+  schema: http
+  health_check: false
+
+# 链路追踪
+jaeger:
+  service_name: full-stack-engineering-backend-api
+  grpc:
+    endpoint: 192.168.2.191:4317
+  http:
+    endpoint: 192.168.2.191:4318
