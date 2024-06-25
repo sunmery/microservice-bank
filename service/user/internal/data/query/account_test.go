@@ -19,6 +19,7 @@ func Setup() *pgxpool.Pool {
 	// user=jack password=secret host=pg.example.com port=5432 dbname=mydb sslmode=verify-ca pool_max_conns=10
 	// # Example URL
 	// postgres://jack:secret@pg.example.com:5432/mydb?sslmode=verify-ca&pool_max_conns=10
+	url := "postgres://root:msdnmm@103.71.69.244:5432/bank?sslmode=disable&pool_max_conns=10"
 	conn, err := pgxpool.New(context.Background(), url)
 	if err != nil {
 		os.Exit(1)

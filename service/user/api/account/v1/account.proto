@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package api.account.v1;
+
+option go_package = "user/api/account/v1;v1";
+
+import "validate/validate.proto";
+import "google/api/annotations.proto";
+
+service AccountService {
+  rpc GetAccount (GetAccountRequest) returns (GetAccountReply) {
+    option (google.api.http) = {
+      get: "/v1/account"
+    };
+  };
+}
+
+message GetAccountRequest {
+  int64 id = 1;
+}
+
+message GetAccountReply {
+  int64 id = 1;
+  string name = 2 [(validate.rules).string.min_len = 2, (validate.rules).string.max_len = 20];
+  string avatar = 3;
+  string owner = 4;
+  int64 balance = 5;
+  string currency = 6;
+}

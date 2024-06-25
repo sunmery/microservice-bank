@@ -52,7 +52,7 @@ func TransferTx(ctx context.Context, fn func(*repository.Queries) error) error {
 	if err != nil {
 		// 如果回滚与事务同时失败, 则返回2错误
 		if rbErr := tx.Rollback(ctx); rbErr != nil {
-			return fmt.Errorf("回滚错误: %v, 事务错误: %v", rbErr, err)
+			return fmt.Errorf("回滚错误: %v, 事务错误: %v\n", rbErr, err)
 		}
 		// 返回事务错误
 		return err
@@ -63,8 +63,8 @@ func TransferTx(ctx context.Context, fn func(*repository.Queries) error) error {
 }
 
 type TransferParams struct {
-	FromAccountID int64 `json:"from_account_id,omitempty"`
-	ToAccountID   int64 `json:"to_account_id,omitempty"`
+	FromAccount int64 `json:"from_account_id,omitempty"`
+	ToAccount   int64 `json:"to_account_id,omitempty"`
 	Amount        int64 `json:"amount,omitempty"`
 }
 
@@ -73,45 +73,81 @@ type TransferResult struct {
 	// 创建的转账数据
 	Transfer *repository.Transfer `json:"transfer,omitempty"`
 	// 转账后的余额
-	FromAccountID *repository.Account `json:"from_account_id,omitempty"`
+	FromAccount *repository.Account `json:"from_account_id,omitempty"`
 	// 转给的用户
-	ToAccountID *repository.Account `json:"to_account_id,omitempty"`
+	ToAccount *repository.Account `json:"to_account_id,omitempty"`
 	// 记录支出后的用户余额
 	FromEntry *repository.Entry `json:"from_entry,omitempty"`
 	// 记录收入的用户余额
 	ToEntry *repository.Entry `json:"to_entry,omitempty"`
 }
 
+var txKey2 = struct{}{}
+
 func (s *Store) Transaction(ctx context.Context, arg TransferParams) (TransferResult, error) {
 	var result TransferResult
 	// 在一个新的事务里面操作, 使用q来操作事务, 而不是db
 	err := TransferTx(ctx, func(q *repository.Queries) error {
 		var err error
+
+		txName := ctx.Value(txKey2)
+
+		fmt.Printf("%v: create transfer 创建转账记录, 由用户ID: %v 转到用户ID: %v 的金额是: %v\n",txName, arg.FromAccount, arg.ToAccount, arg.Amount)
 		result.Transfer, err = q.CreateTransfer(ctx, &repository.CreateTransferParams{
-			FromAccountID: arg.FromAccountID,
-			ToAccountID:   arg.ToAccountID,
+			FromAccountID: arg.FromAccount,
+			ToAccountID:   arg.ToAccount,
 			Amount:        arg.Amount,
 		})
 		if err != nil {
 			return err
 		}
 
+		fmt.Printf("%v: create entry 1 创建账单记录, 记录用户: %v 的金额变化为: %v\n", txName,arg.FromAccount, -arg.Amount)
 		result.FromEntry, err = q.CreateEntry(ctx, &repository.CreateEntryParams{
-			AccountID: arg.FromAccountID,
+			AccountID: arg.FromAccount,
 			Amount:    -arg.Amount,
 		})
 		if err != nil {
 			return err
 		}
 
+		fmt.Printf("%v: create entry 2 创建账单记录, 记录用户: %v 的金额变化为: %v\n", txName, arg.ToAccount, arg.Amount)
 		result.ToEntry, err = q.CreateEntry(ctx, &repository.CreateEntryParams{
-			AccountID: arg.ToAccountID,
+			AccountID: arg.ToAccount,
 			Amount:    arg.Amount,
 		})
 		if err != nil {
 			return err
 		}
 
+		fmt.Printf("%v: get account 1\n", txName)
+		account1, err := q.GetAccountForUpdate(ctx, arg.FromAccount)
+		if err != nil {
+			return err
+		}
+
+		result.FromAccount, err = q.UpdateAccount(ctx, &repository.UpdateAccountParams{
+			ID:       arg.FromAccount,
+			Balance:  account1.Balance - arg.Amount,
+		})
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("%v: get account 2\n", txName)
+		account2, err := q.GetAccountForUpdate(ctx, arg.ToAccount)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("%v: update account 2 更新账户, 记录用户ID: %v 的余额变化为: %v\n",txName,  arg.ToAccount, arg.Amount)
+		result.ToAccount, err = q.UpdateAccount(ctx, &repository.UpdateAccountParams{
+			ID:       arg.ToAccount,
+			Balance:  account2.Balance + arg.Amount,
+		})
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 

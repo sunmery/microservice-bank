@@ -56,6 +56,11 @@ generate:
 	go get github.com/google/wire/cmd/wire@latest
 	go generate ./...
 
+.PHONY: sqlc
+# generate
+sqlc:
+	sqlc generate
+
 .PHONY: all
 # generate all
 all:

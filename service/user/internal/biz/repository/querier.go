@@ -45,6 +45,13 @@ type Querier interface {
 	//  WHERE id = $1
 	//  LIMIT 1
 	GetAccount(ctx context.Context, id int64) (*Account, error)
+	//GetAccountForUpdate
+	//
+	//  SELECT id, owner, balance, currency, created_at
+	//  FROM accounts
+	//  WHERE id = $1
+	//      FOR NO KEY UPDATE
+	GetAccountForUpdate(ctx context.Context, id int64) (*Account, error)
 	//GetEntry
 	//
 	//  SELECT id, account_id, amount, created_at
